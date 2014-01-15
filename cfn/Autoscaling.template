@@ -1,0 +1,62 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "Template to create multiple instances.",
+
+  "Parameters" : {
+    "KeyName" : {
+      "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the instances",
+      "Type" : "String",
+      "Default" : "heat_key"
+    },
+    "InstanceType" : {
+      "Description" : "Instance type",
+      "Type" : "String",
+      "Default" : "m1.tiny",
+      "AllowedValues" : [ "m1.tiny", "m1.small", "m1.medium", "m1.large", "m1.xlarge" ],
+      "ConstraintDescription" : "must be a valid EC2 instance type."
+    },
+    "ImageId" : {
+      "Description" : "Name of the image to use",
+      "Type" : "String",
+      "Default" : "F19-x86_64-cfntools"
+    },
+    "SubnetUuid" : {
+      "Description" : "Subnet UUID",
+      "Default" : "784de249-f767-4a65-b7a1-69ec7eed1275",
+      "Type" : "String"
+    },
+    "NumInstances": {
+      "Default": "2",
+      "MinValue": "1",
+      "MaxValue": "1001",
+      "Description" : "Number of instances to create",
+      "Type": "Number"
+    }
+  },
+  "Resources" : {
+    "JobServerGroup" : {
+      "Type" : "AWS::AutoScaling::AutoScalingGroup",
+      "Properties" : {
+        "LaunchConfigurationName" : { "Ref" : "JobServerConfig" },
+        "AvailabilityZones" : { "Fn::GetAZs" : "" },
+        "VPCZoneIdentifier" : [ { "Ref" : "SubnetUuid" } ],
+        "MinSize" : "2",
+        "MaxSize" : "3"
+      }
+    },
+    "JobServerConfig" : {
+      "Type" : "AWS::AutoScaling::LaunchConfiguration",
+      "Properties": {
+        "ImageId"           : { "Ref" : "ImageId" },
+        "InstanceType"      : { "Ref" : "InstanceType" },
+        "KeyName"           : { "Ref" : "KeyName" },
+        "NovaSchedulerHints": [ {"Key": "part", "Value": "long"},
+                                {"Key": "ready", "Value": "short"} ],
+        "UserData"          : { "Fn::Base64" : { "Fn::Join" : ["", [
+          "#!/bin/bash -v\n"
+        ]]}}
+      }
+    }
+  }
+}
